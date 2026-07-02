@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp">
+
+        <!-- Checkbox: visible only in select mode -->
+        <CheckBox
+            android:id="@+id/checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Colored type stripe -->
+        <View
+            android:id="@+id/view_stripe"
+            android:layout_width="4dp"
+            android:layout_height="36dp"
+            android:background="#EEEEEE"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Description + date/time -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_description"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No description"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/tv_date_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="01/01/2025  02:30 PM"
+                android:textSize="12sp"
+                android:textColor="#999999"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <!-- Amount -->
+        <TextView
+            android:id="@+id/tv_amount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+₹0.00"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp" />
+
+        <!-- Edit button: visible only in normal mode -->
+        <TextView
+            android:id="@+id/btn_edit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit"
+            android:textSize="12sp"
+            android:textColor="#1a73e8"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F7FA">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/white"
+        app:title=""
+        app:titleTextColor="@color/black" />
+
+    <!-- Balance + Stats card -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="#1a73e8">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Account name -->
+            <TextView
+                android:id="@+id/tv_account_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#CCDDFF"
+                android:textSize="14sp" />
+
+            <!-- Current balance (big) -->
+            <TextView
+                android:id="@+id/tv_balance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0.00"
+                android:textColor="@color/white"
+                android:textSize="34sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp" />
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#3355AA"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="14dp" />
+
+            <!-- Credit / Debit row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- Total Income -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="↑ Total In"
+                        android:textColor="#AACCFF"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tv_total_credit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textColor="#7FFFB0"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <!-- Total Spent -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="↓ Total Spent"
+                        android:textColor="#AACCFF"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tv_total_debit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textColor="#FF8888"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <!-- Analysis button -->
+                <TextView
+                    android:id="@+id/btn_analysis"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:text="Analysis ›"
+                    android:textColor="#CCDDFF"
+                    android:textSize="13sp"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp"
+                    android:background="@drawable/btn_outline_white"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Transactions section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Transactions"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Empty state -->
+        <TextView
+            android:id="@+id/tv_no_transactions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No transactions yet"
+            android:gravity="center"
+            android:textColor="#AAAAAA"
+            android:textSize="14sp"
+            android:paddingVertical="32dp"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_transactions"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="4dp" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:paddingVertical="6dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- NORMAL mode: Add / Subtract -->
+    <LinearLayout
+        android:id="@+id/ll_normal_actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp"
+        android:paddingTop="8dp">
+
+        <Button
+            android:id="@+id/btn_credit"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:backgroundTint="#2ECC71"
+            android:text="＋  Add"
+            android:textColor="@color/white"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/btn_debit"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:backgroundTint="#E74C3C"
+            android:text="−  Subtract"
+            android:textColor="@color/white"
+            android:textSize="15sp" />
+
+    </LinearLayout>
+
+    <!-- SELECT mode: Cancel / Delete -->
+    <LinearLayout
+        android:id="@+id/ll_select_actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp"
+        android:paddingTop="8dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_cancel_select"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:text="Cancel"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btn_delete"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:text="Delete"
+            android:textSize="15sp"
+            android:backgroundTint="#E74C3C" />
+
+    </LinearLayout>
+
+</LinearLayout>
