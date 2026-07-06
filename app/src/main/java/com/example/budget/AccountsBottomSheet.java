@@ -61,7 +61,9 @@ public class AccountsBottomSheet extends BottomSheetDialogFragment {
             }
             @Override
             public void onAccountLongClick(Account account) {
-                enterRemoveMode();
+                if (!adapter.isRemoveMode()) {
+                    showAccountOptionsDialog(account);
+                }
             }
         });
         rv.setAdapter(adapter);
@@ -103,6 +105,47 @@ public class AccountsBottomSheet extends BottomSheetDialogFragment {
         btnCancel.setVisibility(View.GONE);
         btnRemoveDelete.setText("Remove");
         tvTitle.setText("Accounts");
+    }
+
+    /* ---- long-press options (Rename / Remove) ---- */
+
+    private void showAccountOptionsDialog(Account account) {
+        String[] options = {"Rename", "Remove"};
+        new AlertDialog.Builder(requireContext())
+                .setTitle(account.getName())
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) showRenameDialog(account);
+                    else             enterRemoveMode();
+                })
+                .show();
+    }
+
+    private void showRenameDialog(Account account) {
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_add_account, null);
+        EditText etName = dialogView.findViewById(R.id.et_account_name);
+        etName.setText(account.getName());
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Rename Account")
+                .setView(dialogView)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newName = etName.getText().toString().trim();
+                    if (newName.isEmpty()) {
+                        Toast.makeText(getContext(), "Please enter a name", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    db.renameAccount(account.getId(), newName);
+                    refreshList();
+                    Toast.makeText(getContext(), "Renamed to \"" + newName + "\"", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+
+        etName.post(() -> {
+            etName.requestFocus();
+            etName.selectAll();
+        });
     }
 
     /* ---- actions ---- */

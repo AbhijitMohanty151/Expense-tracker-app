@@ -131,7 +131,7 @@ public class TransactionBottomSheet extends BottomSheetDialogFragment {
             etTime.setText(currentTime);
         }
 
-        /* ---- Live expression preview (NEW) ---- */
+        /* ---- Live expression preview ---- */
         etAmount.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -149,6 +149,11 @@ public class TransactionBottomSheet extends BottomSheetDialogFragment {
                 Double result = ExpressionEvaluator.evaluate(raw);
                 if (result == null) {
                     tvExprPreview.setText("⚠ Invalid expression");
+                    tvExprPreview.setTextColor(0xFFE74C3C); // red
+                } else if (result <= 0) {
+                    // Expression is syntactically valid but not usable as an amount yet.
+                    tvExprPreview.setText("⚠ Result is ₹" + String.format(Locale.getDefault(), "%.2f", result)
+                            + " — must be greater than zero");
                     tvExprPreview.setTextColor(0xFFE74C3C); // red
                 } else {
                     tvExprPreview.setText("= ₹" + String.format(Locale.getDefault(), "%.2f", result));
@@ -192,10 +197,17 @@ public class TransactionBottomSheet extends BottomSheetDialogFragment {
                 return;
             }
 
-            // Use ExpressionEvaluator so plain numbers AND expressions both work (NEW)
+            // Use ExpressionEvaluator so plain numbers AND expressions both work.
             Double amount = ExpressionEvaluator.evaluate(rawAmount);
-            if (amount == null || amount <= 0) {
+            if (amount == null) {
                 etAmount.setError("Enter a valid amount or expression (e.g. 100+30-20)");
+                return;
+            }
+            if (amount <= 0) {
+                // The expression itself is valid — be specific about why it's rejected
+                // instead of lumping this in with a generic "invalid" message.
+                etAmount.setError(String.format(Locale.getDefault(),
+                        "Result is ₹%.2f — amount must be greater than zero", amount));
                 return;
             }
 

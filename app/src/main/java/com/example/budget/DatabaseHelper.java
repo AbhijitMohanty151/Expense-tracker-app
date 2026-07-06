@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
@@ -68,6 +69,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(A_NAME, name);
         cv.put(A_BALANCE, 0.0);
         return getWritableDatabase().insert(TABLE_ACC, null, cv);
+    }
+
+    /** Renames an existing account. No-op if the account doesn't exist. */
+    public void renameAccount(long id, String newName) {
+        ContentValues cv = new ContentValues();
+        cv.put(A_NAME, newName);
+        getWritableDatabase().update(TABLE_ACC, cv, A_ID + "=?",
+                new String[]{String.valueOf(id)});
     }
 
     public Account findAccountByName(String name) {
@@ -156,6 +165,65 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         c.close();
         return account;
+    }
+
+    /* =========================================================
+       TRANSFERS
+       ========================================================= */
+
+    /**
+     * Moves money from one account to another as a linked pair of
+     * transactions (a debit on the source, a credit on the destination),
+     * updating both balances atomically.
+     */
+    public void transferBetweenAccounts(long fromAccountId, long toAccountId, double amount,
+                                        String desc, String date, String time) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            String fromName = getAccountNameInternal(db, fromAccountId);
+            String toName   = getAccountNameInternal(db, toAccountId);
+            String baseDesc = (desc == null || desc.trim().isEmpty()) ? "Transfer" : desc.trim();
+
+            ContentValues cvOut = new ContentValues();
+            cvOut.put(T_ACC_ID, fromAccountId);
+            cvOut.put(T_TYPE,   "debit");
+            cvOut.put(T_AMOUNT, amount);
+            cvOut.put(T_DESC,   baseDesc + " (to " + toName + ")");
+            cvOut.put(T_DATE,   date);
+            cvOut.put(T_TIME,   time);
+            db.insert(TABLE_TXN, null, cvOut);
+
+            ContentValues cvIn = new ContentValues();
+            cvIn.put(T_ACC_ID, toAccountId);
+            cvIn.put(T_TYPE,   "credit");
+            cvIn.put(T_AMOUNT, amount);
+            cvIn.put(T_DESC,   baseDesc + " (from " + fromName + ")");
+            cvIn.put(T_DATE,   date);
+            cvIn.put(T_TIME,   time);
+            db.insert(TABLE_TXN, null, cvIn);
+
+            db.execSQL("UPDATE " + TABLE_ACC + " SET " + A_BALANCE + " = " + A_BALANCE
+                            + " - ? WHERE " + A_ID + " = ?",
+                    new Object[]{amount, fromAccountId});
+            db.execSQL("UPDATE " + TABLE_ACC + " SET " + A_BALANCE + " = " + A_BALANCE
+                            + " + ? WHERE " + A_ID + " = ?",
+                    new Object[]{amount, toAccountId});
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    private String getAccountNameInternal(SQLiteDatabase db, long id) {
+        Cursor c = db.rawQuery(
+                "SELECT " + A_NAME + " FROM " + TABLE_ACC + " WHERE " + A_ID + "=?",
+                new String[]{String.valueOf(id)});
+        String name = "account";
+        if (c.moveToFirst()) name = c.getString(0);
+        c.close();
+        return name;
     }
 
     /* =========================================================
@@ -319,6 +387,121 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return new double[]{credit, debit};
     }
 
+    // ---- Stacked-filter analysis (arbitrary combination of TransactionFilter) ----
+
+    /**
+     * Applies every filter in {@code filters} (AND-ed together) to this account's
+     * transactions and returns a day-by-day breakdown, newest-first — same shape as
+     * {@link #getCustomRangeAnalysis}. The account-level totals across the filtered
+     * set are written into {@code totalsOut[0]} (credit) and {@code totalsOut[1]}
+     * (debit); pass a {@code double[2]} and read it after the call.
+     *
+     * An empty or null filter list just returns the account's full history.
+     */
+    public Map<String, double[]> getFilteredAnalysis(long accountId,
+                                                      List<TransactionFilter> filters,
+                                                      double[] totalsOut) {
+        StringBuilder where = new StringBuilder(T_ACC_ID + "=?");
+        List<String> args = new ArrayList<>();
+        buildFilterWhereClause(accountId, filters, where, args);
+
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT " + DAY_KEY + " AS dk,"
+                        + " SUM(CASE WHEN type='credit' THEN amount ELSE 0 END) AS cr,"
+                        + " SUM(CASE WHEN type='debit'  THEN amount ELSE 0 END) AS dr"
+                        + " FROM " + TABLE_TXN
+                        + " WHERE " + where
+                        + " GROUP BY dk"
+                        + " ORDER BY dk DESC",
+                args.toArray(new String[0]));
+
+        Map<String, double[]> map = new LinkedHashMap<>();
+        double totalCredit = 0, totalDebit = 0;
+        while (c.moveToNext()) {
+            String dk = c.getString(0);
+            double cr = c.getDouble(1);
+            double dr = c.getDouble(2);
+            map.put(isoDayToLabel(dk), new double[]{cr, dr});
+            totalCredit += cr;
+            totalDebit  += dr;
+        }
+        c.close();
+
+        if (totalsOut != null && totalsOut.length >= 2) {
+            totalsOut[0] = totalCredit;
+            totalsOut[1] = totalDebit;
+        }
+        return map;
+    }
+
+    /**
+     * Same filter stack as {@link #getFilteredAnalysis}, but returns the matching
+     * transactions themselves (newest-first) rather than a day-grouped summary —
+     * e.g. for rendering the actual filtered transaction list in the UI.
+     */
+    public List<Transaction> getFilteredTransactions(long accountId,
+                                                      List<TransactionFilter> filters) {
+        StringBuilder where = new StringBuilder(T_ACC_ID + "=?");
+        List<String> args = new ArrayList<>();
+        buildFilterWhereClause(accountId, filters, where, args);
+
+        List<Transaction> list = new ArrayList<>();
+        Cursor c = getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_TXN
+                        + " WHERE " + where
+                        + " ORDER BY " + T_ID + " DESC",
+                args.toArray(new String[0]));
+        while (c.moveToNext()) {
+            list.add(new Transaction(
+                    c.getLong(c.getColumnIndexOrThrow(T_ID)),
+                    accountId,
+                    c.getString(c.getColumnIndexOrThrow(T_TYPE)),
+                    c.getDouble(c.getColumnIndexOrThrow(T_AMOUNT)),
+                    c.getString(c.getColumnIndexOrThrow(T_DESC)),
+                    c.getString(c.getColumnIndexOrThrow(T_DATE)),
+                    c.getString(c.getColumnIndexOrThrow(T_TIME))));
+        }
+        c.close();
+        return list;
+    }
+
+    /** Shared WHERE-clause builder for the filter-stack queries above. */
+    private void buildFilterWhereClause(long accountId, List<TransactionFilter> filters,
+                                        StringBuilder where, List<String> args) {
+        args.add(String.valueOf(accountId));
+
+        if (filters != null) {
+            for (TransactionFilter f : filters) {
+                switch (f.type) {
+                    case DATE_RANGE:
+                        where.append(" AND ").append(DATE_ISO).append(" >= ?")
+                             .append(" AND ").append(DATE_ISO).append(" <= ?");
+                        args.add(f.fromIso);
+                        args.add(f.toIso);
+                        break;
+
+                    case DESCRIPTION:
+                        where.append(" AND LOWER(").append(T_DESC).append(") ")
+                             .append(f.excludeKeyword ? "NOT LIKE ?" : "LIKE ?");
+                        args.add("%" + f.keyword.toLowerCase(Locale.ROOT) + "%");
+                        break;
+
+                    case TXN_TYPE:
+                        where.append(" AND ").append(T_TYPE).append(" = ?");
+                        args.add(f.txnType);
+                        break;
+
+                    case AMOUNT_RANGE:
+                        where.append(" AND ").append(T_AMOUNT).append(" >= ?")
+                             .append(" AND ").append(T_AMOUNT).append(" <= ?");
+                        args.add(String.valueOf(f.minAmount));
+                        args.add(String.valueOf(f.maxAmount));
+                        break;
+                }
+            }
+        }
+    }
+
     /* =========================================================
        TRANSACTION OPERATIONS
        ========================================================= */
@@ -415,201 +598,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{String.valueOf(accountId),
                         String.valueOf(limit),
                         String.valueOf(offset)});
-        while (c.moveToNext()) {
-            list.add(new Transaction(
-                    c.getLong(c.getColumnIndexOrThrow(T_ID)),
-                    accountId,
-                    c.getString(c.getColumnIndexOrThrow(T_TYPE)),
-                    c.getDouble(c.getColumnIndexOrThrow(T_AMOUNT)),
-                    c.getString(c.getColumnIndexOrThrow(T_DESC)),
-                    c.getString(c.getColumnIndexOrThrow(T_DATE)),
-                    c.getString(c.getColumnIndexOrThrow(T_TIME))));
-        }
-        c.close();
-        return list;
-    }
-
-//    public Map<String, double[]> getFilteredAnalysis(long accountId,
-//                                                     List<TransactionFilter> filters,
-//                                                     double[] out_totals) {
-//        StringBuilder where = new StringBuilder();
-//        List<String>  args  = new ArrayList<>();
-//
-//        // Always filter by account
-//        where.append(T_ACC_ID).append("=?");
-//        args.add(String.valueOf(accountId));
-//
-//        for (TransactionFilter f : filters) {
-//            switch (f.type) {
-//
-//                case DATE_RANGE:
-//                    where.append(" AND ").append(DATE_ISO).append(" >= ?");
-//                    args.add(f.fromIso);
-//                    where.append(" AND ").append(DATE_ISO).append(" <= ?");
-//                    args.add(f.toIso);
-//                    break;
-//
-//                case DESCRIPTION:
-//                    if (f.excludeKeyword) {
-//                        where.append(" AND LOWER(").append(T_DESC).append(") NOT LIKE ?");
-//                    } else {
-//                        where.append(" AND LOWER(").append(T_DESC).append(") LIKE ?");
-//                    }
-//                    args.add("%" + f.keyword.toLowerCase() + "%");
-//                    break;
-//
-//                case TXN_TYPE:
-//                    where.append(" AND ").append(T_TYPE).append("=?");
-//                    args.add(f.txnType);
-//                    break;
-//
-//                case AMOUNT_RANGE:
-//                    where.append(" AND ").append(T_AMOUNT).append(" >= ?");
-//                    args.add(String.valueOf(f.minAmount));
-//                    where.append(" AND ").append(T_AMOUNT).append(" <= ?");
-//                    args.add(String.valueOf(f.maxAmount));
-//                    break;
-//            }
-//        }
-//
-//        String[] argsArray = args.toArray(new String[0]);
-//
-//        // ---- Day-level grouped results ----
-//        Cursor c = getReadableDatabase().rawQuery(
-//                "SELECT " + DAY_KEY + " AS dk,"
-//                        + " SUM(CASE WHEN type='credit' THEN amount ELSE 0 END) AS cr,"
-//                        + " SUM(CASE WHEN type='debit'  THEN amount ELSE 0 END) AS dr"
-//                        + " FROM " + TABLE_TXN
-//                        + " WHERE " + where
-//                        + " GROUP BY dk"
-//                        + " ORDER BY dk DESC",
-//                argsArray);
-//
-//        Map<String, double[]> map = new LinkedHashMap<>();
-//        while (c.moveToNext()) {
-//            String dk = c.getString(0);
-//            double cr = c.getDouble(1);
-//            double dr = c.getDouble(2);
-//            map.put(isoDayToLabel(dk), new double[]{cr, dr});
-//        }
-//        c.close();
-//
-//        // ---- Totals ----
-//        Cursor ct = getReadableDatabase().rawQuery(
-//                "SELECT type, SUM(amount) FROM " + TABLE_TXN
-//                        + " WHERE " + where
-//                        + " GROUP BY type",
-//                argsArray);
-//
-//        out_totals[0] = 0;
-//        out_totals[1] = 0;
-//        while (ct.moveToNext()) {
-//            String type = ct.getString(0);
-//            double sum  = ct.getDouble(1);
-//            if ("credit".equals(type)) out_totals[0] = sum;
-//            else                       out_totals[1] = sum;
-//        }
-//        ct.close();
-//
-//        return map;
-//    }
-
-    private void buildWhereFromFilters(long accountId,
-                                       List<TransactionFilter> filters,
-                                       StringBuilder where,
-                                       List<String> args) {
-        where.append(T_ACC_ID).append("=?");
-        args.add(String.valueOf(accountId));
-
-        for (TransactionFilter f : filters) {
-            switch (f.type) {
-                case DATE_RANGE:
-                    where.append(" AND ").append(DATE_ISO).append(" >= ?");
-                    args.add(f.fromIso);
-                    where.append(" AND ").append(DATE_ISO).append(" <= ?");
-                    args.add(f.toIso);
-                    break;
-                case DESCRIPTION:
-                    if (f.excludeKeyword) {
-                        where.append(" AND LOWER(").append(T_DESC).append(") NOT LIKE ?");
-                    } else {
-                        where.append(" AND LOWER(").append(T_DESC).append(") LIKE ?");
-                    }
-                    args.add("%" + f.keyword.toLowerCase() + "%");
-                    break;
-                case TXN_TYPE:
-                    where.append(" AND ").append(T_TYPE).append("=?");
-                    args.add(f.txnType);
-                    break;
-                case AMOUNT_RANGE:
-                    where.append(" AND ").append(T_AMOUNT).append(" >= ?");
-                    args.add(String.valueOf(f.minAmount));
-                    where.append(" AND ").append(T_AMOUNT).append(" <= ?");
-                    args.add(String.valueOf(f.maxAmount));
-                    break;
-            }
-        }
-    }
-
-    /**
-     * Returns day-grouped summary + fills out_totals[]{credit, debit}.
-     * "dd MMM yyyy" → double[]{credit, debit}, newest-first.
-     */
-    public Map<String, double[]> getFilteredAnalysis(long accountId,
-                                                     List<TransactionFilter> filters,
-                                                     double[] out_totals) {
-        StringBuilder where = new StringBuilder();
-        List<String>  args  = new ArrayList<>();
-        buildWhereFromFilters(accountId, filters, where, args);
-        String[] argsArray = args.toArray(new String[0]);
-
-        Cursor c = getReadableDatabase().rawQuery(
-                "SELECT " + DAY_KEY + " AS dk,"
-                        + " SUM(CASE WHEN type='credit' THEN amount ELSE 0 END) AS cr,"
-                        + " SUM(CASE WHEN type='debit'  THEN amount ELSE 0 END) AS dr"
-                        + " FROM " + TABLE_TXN
-                        + " WHERE " + where
-                        + " GROUP BY dk ORDER BY dk DESC",
-                argsArray);
-
-        Map<String, double[]> map = new LinkedHashMap<>();
-        while (c.moveToNext()) {
-            map.put(isoDayToLabel(c.getString(0)),
-                    new double[]{c.getDouble(1), c.getDouble(2)});
-        }
-        c.close();
-
-        Cursor ct = getReadableDatabase().rawQuery(
-                "SELECT type, SUM(amount) FROM " + TABLE_TXN
-                        + " WHERE " + where + " GROUP BY type",
-                argsArray);
-        out_totals[0] = 0; out_totals[1] = 0;
-        while (ct.moveToNext()) {
-            double sum = ct.getDouble(1);
-            if ("credit".equals(ct.getString(0))) out_totals[0] = sum;
-            else                                   out_totals[1] = sum;
-        }
-        ct.close();
-        return map;
-    }
-
-    /**
-     * Returns the individual Transaction rows that satisfy the filter stack,
-     * ordered newest-first (by ISO date DESC, then id DESC).
-     */
-    public List<Transaction> getFilteredTransactions(long accountId,
-                                                     List<TransactionFilter> filters) {
-        StringBuilder where = new StringBuilder();
-        List<String>  args  = new ArrayList<>();
-        buildWhereFromFilters(accountId, filters, where, args);
-
-        Cursor c = getReadableDatabase().rawQuery(
-                "SELECT * FROM " + TABLE_TXN
-                        + " WHERE " + where
-                        + " ORDER BY " + DATE_ISO + " DESC, " + T_ID + " DESC",
-                args.toArray(new String[0]));
-
-        List<Transaction> list = new ArrayList<>();
         while (c.moveToNext()) {
             list.add(new Transaction(
                     c.getLong(c.getColumnIndexOrThrow(T_ID)),

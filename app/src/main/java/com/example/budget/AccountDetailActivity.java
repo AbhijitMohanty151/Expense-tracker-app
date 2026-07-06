@@ -25,6 +25,11 @@ public class AccountDetailActivity extends AppCompatActivity
 
     private static final int BATCH_SIZE = 20;
 
+    // Light red used for the balance figure when it goes negative,
+    // chosen for contrast against the blue header card.
+    private static final int COLOR_BALANCE_NEGATIVE = 0xFFFF8A80;
+    private static final int COLOR_BALANCE_POSITIVE = 0xFFFFFFFF;
+
     private long accountId;
     private DatabaseHelper db;
 
@@ -72,6 +77,7 @@ public class AccountDetailActivity extends AppCompatActivity
 
         Button  btnCredit       = findViewById(R.id.btn_credit);
         Button  btnDebit        = findViewById(R.id.btn_debit);
+        Button  btnTransfer     = findViewById(R.id.btn_transfer);
         Button  btnCancelSelect = findViewById(R.id.btn_cancel_select);
         TextView btnAnalysis    = findViewById(R.id.btn_analysis);
 
@@ -95,6 +101,7 @@ public class AccountDetailActivity extends AppCompatActivity
         /* ---- Button listeners ---- */
         btnCredit.setOnClickListener(v -> openAddSheet("credit"));
         btnDebit .setOnClickListener(v -> openAddSheet("debit"));
+        btnTransfer.setOnClickListener(v -> openTransferSheet());
         btnCancelSelect.setOnClickListener(v -> exitSelectMode());
 
         btnDelete.setOnClickListener(v -> {
@@ -182,6 +189,9 @@ public class AccountDetailActivity extends AppCompatActivity
         if (account == null) { finish(); return; }
         tvAccountName.setText(account.getName());
         tvBalance.setText(String.format("₹%.2f", account.getBalance()));
+        tvBalance.setTextColor(account.getBalance() < 0
+                ? COLOR_BALANCE_NEGATIVE
+                : COLOR_BALANCE_POSITIVE);
         if (getSupportActionBar() != null) getSupportActionBar().setTitle(account.getName());
 
         // Total credit / debit stats
@@ -224,5 +234,16 @@ public class AccountDetailActivity extends AppCompatActivity
         TransactionBottomSheet sheet = TransactionBottomSheet.newInstance(accountId, type);
         sheet.setOnTransactionSavedListener(this::refreshAll);
         sheet.show(getSupportFragmentManager(), "add_txn");
+    }
+
+    private void openTransferSheet() {
+        // Need at least one other account to transfer to.
+        if (db.getAllAccounts().size() < 2) {
+            Toast.makeText(this, "Create another account first to transfer money", Toast.LENGTH_LONG).show();
+            return;
+        }
+        TransferBottomSheet sheet = TransferBottomSheet.newInstance(accountId);
+        sheet.setOnTransferSavedListener(this::refreshAll);
+        sheet.show(getSupportFragmentManager(), "transfer_txn");
     }
 }

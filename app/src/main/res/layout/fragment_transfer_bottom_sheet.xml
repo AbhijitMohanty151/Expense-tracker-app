@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bottom_sheet_bg"
+    android:paddingHorizontal="20dp"
+    android:paddingBottom="32dp">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/sheet_handle" />
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Transfer Money"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        android:layout_marginBottom="16dp" />
+
+    <!-- From -> To row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="From"
+                android:textColor="#888888"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tv_from_account_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⇄"
+            android:textSize="18sp"
+            android:textColor="#1a73e8"
+            android:paddingHorizontal="12dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="To"
+                android:textColor="#888888"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/spinner_to_account"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Amount -->
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Amount (₹)"
+        android:textColorHint="@color/black"
+        android:layout_marginBottom="14dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_transfer_amount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tv_transfer_expr_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:paddingHorizontal="4dp"
+            android:textColor="#1a73e8"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Description -->
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Description (optional)"
+        android:textColorHint="@color/black"
+        android:layout_marginBottom="14dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_transfer_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textColorHint="@color/black" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Date + Time row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="20dp">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Date"
+            android:textColorHint="@color/black"
+            android:layout_marginEnd="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_transfer_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:textColor="@color/black"
+                android:textColorHint="#424242" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Time"
+            android:textColorHint="@color/black">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_transfer_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:textColor="@color/black"
+                android:textColorHint="#000000" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </LinearLayout>
+
+    <!-- Submit -->
+    <Button
+        android:id="@+id/btn_transfer_submit"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="Transfer"
+        android:backgroundTint="#1a73e8"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
+
+</LinearLayout>

@@ -182,7 +182,7 @@
 
     </LinearLayout>
 
-    <!-- NORMAL mode: Add / Subtract -->
+    <!-- NORMAL mode: Add / Subtract / Transfer -->
     <LinearLayout
         android:id="@+id/ll_normal_actions"
         android:layout_width="match_parent"
@@ -196,22 +196,36 @@
             android:id="@+id/btn_credit"
             android:layout_width="0dp"
             android:layout_height="52dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:backgroundTint="#2ECC71"
-            android:text="＋  Add"
+            android:text="＋ Add"
             android:textColor="@color/white"
-            android:textSize="15sp" />
+            android:textSize="13sp"
+            android:paddingHorizontal="0dp" />
 
         <Button
             android:id="@+id/btn_debit"
             android:layout_width="0dp"
             android:layout_height="52dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:backgroundTint="#E74C3C"
-            android:text="−  Subtract"
+            android:text="− Subtract"
             android:textColor="@color/white"
-            android:textSize="15sp" />
+            android:textSize="13sp"
+            android:paddingHorizontal="0dp" />
+
+        <Button
+            android:id="@+id/btn_transfer"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:backgroundTint="#1a73e8"
+            android:text="⇄ Transfer"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:paddingHorizontal="0dp" />
 
     </LinearLayout>
 

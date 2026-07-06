@@ -19,6 +19,9 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.ViewHold
         void onAccountLongClick(Account account);
     }
 
+    private static final int COLOR_BALANCE_POSITIVE = 0xFF1A73E8;
+    private static final int COLOR_BALANCE_NEGATIVE = 0xFFE74C3C;
+
     private List<Account> accounts;
     private final OnAccountClickListener listener;
     private boolean removeMode = false;
@@ -61,6 +64,9 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.ViewHold
         Account account = accounts.get(position);
         h.tvName.setText(account.getName());
         h.tvBalance.setText(String.format("₹%.2f", account.getBalance()));
+        h.tvBalance.setTextColor(account.getBalance() < 0
+                ? COLOR_BALANCE_NEGATIVE
+                : COLOR_BALANCE_POSITIVE);
         // Show first letter in the icon circle
         h.tvIcon.setText(account.getName().isEmpty() ? "?" :
                 String.valueOf(account.getName().charAt(0)).toUpperCase());
