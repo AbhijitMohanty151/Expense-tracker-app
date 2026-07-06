@@ -273,7 +273,7 @@ public class AnalysisBottomSheet extends BottomSheetDialogFragment {
             final Map<String, double[]> summary =
                     db.getFilteredAnalysis(accountId, snapshot, totals);
             final List<Transaction> txns =
-                    db``````.getFilteredTransactions(accountId, snapshot);
+                    db.getFilteredTransactions(accountId, snapshot);
 
             uiHandler.post(() -> {
                 if (!isAdded()) return;
